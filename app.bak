@@ -1,0 +1,126 @@
+from flask import Flask, render_template, request, redirect, session
+import mysql.connector
+
+app = Flask(__name__)
+app.secret_key = "clave123"
+
+@app.route("/", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        try:
+            username = request.form["username"]
+            password = request.form["password"]
+        except KeyError:
+            return render_template("login.html", error="Missing username or password")
+
+        try:
+            conn = mysql.connector.connect(
+                host="192.168.122.220",
+                user=username,
+                password=password
+            )
+            conn.close()
+            session["username"] = username
+            session["password"] = password
+            return redirect("/databases")
+        except mysql.connector.Error:
+            return render_template("login.html", error="Invalid username or password")
+
+    return render_template("login.html", error=None)
+
+@app.route("/databases")
+def databases():
+    if "username" not in session:
+        return redirect("/")
+
+    try:
+        conn = mysql.connector.connect(
+            host="192.168.122.220",
+            user=session["username"],
+            password=session["password"]
+        )
+        cursor = conn.cursor()
+        cursor.execute("SHOW DATABASES")
+        dbs = [db[0] for db in cursor.fetchall()]
+        cursor.close()
+        conn.close()
+        return render_template("databases.html", databases=dbs)
+    except mysql.connector.Error as err:
+        return f"Error: {err}"
+
+@app.route("/database/<db_name>/tables", methods=["GET", "POST"])
+def tables(db_name):
+    if "username" not in session:
+        return redirect("/")
+
+    try:
+        # Conexión normal del usuario autenticado
+        conn = mysql.connector.connect(
+            host="192.168.122.220",
+            user=session["username"],
+            password=session["password"],
+            database=db_name
+        )
+        cursor = conn.cursor()
+        cursor.execute("SHOW TABLES")
+        tables_list = [table[0] for table in cursor.fetchall()]
+
+        searched_tables = None
+        if request.method == "POST":
+            table_name = request.form["table_name"]
+
+            # VULNERABILIDAD INTENCIONAL: SQL Injection con UNION
+            # Construimos una query vulnerable que permite UNION-based injection
+            # Esta query filtra solo las tablas a las que el usuario tiene acceso
+            base_query = f"""
+			SELECT table_name
+            		FROM information_schema.tables
+            		WHERE table_schema = '{db_name}'
+            		AND table_name = '{table_name}'
+            		AND table_name IN (
+                			   SELECT table_name
+                			   FROM information_schema.table_privileges
+                			   WHERE grantee = '{session["username"]}'
+            				   );
+			 """
+
+            # La vulnerabilidad permite bypassear el filtro de privilegios
+            cursor.execute(base_query)
+            searched_tables = [row[0] for row in cursor.fetchall()]
+
+        cursor.close()
+        conn.close()
+
+        return render_template("tables.html", db_name=db_name, tables=tables_list, searched_tables=searched_tables, error=None)
+    except mysql.connector.Error as err:
+        return render_template("tables.html", db_name=db_name, tables=[], searched_tables=None, error=str(err))
+
+@app.route("/database/<db_name>/table/<table_name>")
+def table_data(db_name, table_name):
+    if "username" not in session:
+        return redirect("/")
+
+    try:
+        conn = mysql.connector.connect(
+            host="192.168.122.220",
+            user=session["username"],
+            password=session["password"],
+            database=db_name
+        )
+        cursor = conn.cursor()
+        cursor.execute(f"SELECT * FROM `{table_name}`")
+        data = cursor.fetchall()
+        columns = [desc[0] for desc in cursor.description] if cursor.description else []
+        cursor.close()
+        conn.close()
+        return render_template("table_data.html", db_name=db_name, table_name=table_name, columns=columns, data=data)
+    except mysql.connector.Error as err:
+        return f"Error: {err}"
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/")
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)

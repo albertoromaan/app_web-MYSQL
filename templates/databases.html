@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Accessible Databases</title>
+</head>
+<body>
+    <h2>Accessible Databases</h2>
+    <ul>
+        {% for db in databases %}
+            <li><a href="/database/{{ db }}/tables">{{ db }}</a></li>
+        {% endfor %}
+    </ul>
+    <br>
+    <a href="/logout">Logout</a>
+</body>
+</html>

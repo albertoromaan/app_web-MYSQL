@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Data in {{ table_name }} ({{ db_name }})</title>
+</head>
+<body>
+    <h2>Data in Table: {{ table_name }} (Database: {{ db_name }})</h2>
+    {% if data %}
+        <table border="1" cellpadding="10">
+            <tr>
+                {% for col in columns %}
+                    <th>{{ col }}</th>
+                {% endfor %}
+            </tr>
+            {% for row in data %}
+                <tr>
+                    {% for value in row %}
+                        <td>{{ value }}</td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p>No data found in {{ table_name }}.</p>
+    {% endif %}
+    <br>
+    <a href="/database/{{ db_name }}/tables">Back to Tables</a> | <a href="/databases">Back to Databases</a> | <a href="/logout">Logout</a>
+</body>
+</html>

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Tables in {{ db_name }}</title>
+</head>
+<body>
+    <h2>Tables in {{ db_name }}</h2>
+    <form method="POST">
+        <label>Search for a Table:</label><br>
+        <input type="text" name="table_name" required><br><br>
+        <button type="submit">Search</button>
+    </form>
+    <br>
+    <h3>All Tables:</h3>
+    <ul>
+        {% for table in tables %}
+            <li><a href="/database/{{ db_name }}/table/{{ table }}">{{ table }}</a></li>
+        {% endfor %}
+    </ul>
+    {% if searched_tables %}
+        <h3>Searched Tables:</h3>
+        <ul>
+            {% for table in searched_tables %}
+                <li><a href="/database/{{ db_name }}/table/{{ table }}">{{ table }}</a></li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+    {% if error %}
+        <p style="color: red;">{{ error }}</p>
+    {% endif %}
+    <br>
+    <a href="/databases">Back to Databases</a> | <a href="/logout">Logout</a>
+</body>
+</html>
