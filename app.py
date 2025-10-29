@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, redirect, session
 import mysql.connector
 
 app = Flask(__name__)
-app.secret_key = "clave123"  # NO usar en producción
+app.secret_key = "clave123"  
 HOST = "192.168.122.85"
 
 @app.route("/", methods=["GET", "POST"])
@@ -100,7 +100,6 @@ def table_data(db_name, table_name):
             database=db_name
         )
         cursor = conn.cursor()
-        # VULNERABILIDAD: table_name sin escapar (posible SQL injection)
         cursor.execute(f"SELECT * FROM `{table_name}`")
         data = cursor.fetchall()
         columns = [desc[0] for desc in cursor.description] if cursor.description else []
